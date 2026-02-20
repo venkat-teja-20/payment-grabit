@@ -59,10 +59,9 @@ public class JWTFilter extends OncePerRequestFilter {
                 role=JWTUtil.extractRole(claims);
             }
             if(email!=null && role!=null && SecurityContextHolder.getContext().getAuthentication()==null){
-                SecurityContextHolder contextHolder=new SecurityContextHolder();
                 List<SimpleGrantedAuthority> authorities=new ArrayList<>();
                 try{
-                    LinkedHashMap<String,Object> rolesMap= (LinkedHashMap<String, Object>) redisTemplate.opsForValue().get(Long.parseLong(role));
+                    LinkedHashMap<String,Object> rolesMap= (LinkedHashMap<String, Object>) redisTemplate.opsForValue().get(role);
                     RoleDTO roles=objectMapper.convertValue(rolesMap,RoleDTO.class);
                     if(Utility.isNullOrEmpty(roles) || Utility.isNullOrEmpty(roles.getRole()) || Utility.isNullOrEmpty(roles.getPermissions()))
                         throw new CustomException(Utility.buildErrorObject("INVALID_RESPONSE", "response received from auth service while fetching role details is null or not valid", 500, "JWTFilter"));
@@ -71,6 +70,7 @@ public class JWTFilter extends OncePerRequestFilter {
                         authorities.add(new SimpleGrantedAuthority(permissionDTO.getPermission().toValue()));
                     });
                 } catch (Exception e) {
+                    log.error(e);
                     throw new CustomException(Utility.buildErrorObject("ROLE_FETCH_ERROR","Error while handling role details from redis",500,"JWTFilter"));
                 }
                 UsernamePasswordAuthenticationToken authenticationToken=new UsernamePasswordAuthenticationToken(email,null,authorities);

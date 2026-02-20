@@ -7,6 +7,7 @@ public enum CommonErrors {
     AUTHENTICATION_EXPIRED("Signature has expired"),
     AUTHENTICATION_ERROR("Authentication is required"),
     AUTHENTICATION_REQUIRED("User is not authenticated"),
+    SOMETHING_WENT_WRONG("Something went wrong"),
     FORBIDDEN("You do not have the permission to access this resource");
 
     @Getter
