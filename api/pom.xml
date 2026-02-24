@@ -17,4 +17,12 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
+    <dependencies>
+        <dependency>
+            <groupId>com.grabit</groupId>
+            <artifactId>common</artifactId>
+            <version>GRABIT-PAYMENT-0.0.0.1</version>
+        </dependency>
+    </dependencies>
+
 </project>
