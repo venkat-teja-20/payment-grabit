@@ -1,6 +1,7 @@
 package com.grabit.config;
 
 import com.grabit.Utilities.JWTUtil;
+import com.grabit.Utilities.ModelMapperUtility;
 import com.grabit.Utilities.Utility;
 import com.grabit.bean.RoleDTO;
 import com.grabit.enums.CommonErrors;
@@ -34,8 +35,6 @@ import java.util.List;
 public class JWTFilter extends OncePerRequestFilter {
     private RedisTemplate<String,Object> redisTemplate;
 
-    private final ObjectMapper objectMapper=new ObjectMapper();
-
     public JWTFilter(RedisTemplate<String, Object> redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
@@ -61,14 +60,16 @@ public class JWTFilter extends OncePerRequestFilter {
             if(email!=null && role!=null && SecurityContextHolder.getContext().getAuthentication()==null){
                 List<SimpleGrantedAuthority> authorities=new ArrayList<>();
                 try{
-                    LinkedHashMap<String,Object> rolesMap= (LinkedHashMap<String, Object>) redisTemplate.opsForValue().get(role);
-                    RoleDTO roles=objectMapper.convertValue(rolesMap,RoleDTO.class);
+                    LinkedHashMap<String,Object> rolesMap= (LinkedHashMap<String, Object>) redisTemplate.opsForValue().get("role_"+role);
+                    RoleDTO roles= ModelMapperUtility.map(rolesMap,RoleDTO.class);
                     if(Utility.isNullOrEmpty(roles) || Utility.isNullOrEmpty(roles.getRole()) || Utility.isNullOrEmpty(roles.getPermissions()))
                         throw new CustomException(Utility.buildErrorObject("INVALID_RESPONSE", "response received from auth service while fetching role details is null or not valid", 500, "JWTFilter"));
                     authorities.add(new SimpleGrantedAuthority("ROLE_"+roles.getRole().toValue()));
                     roles.getPermissions().forEach(permissionDTO -> {
                         authorities.add(new SimpleGrantedAuthority(permissionDTO.getPermission().toValue()));
                     });
+                } catch (CustomException e) {
+                    throw e;
                 } catch (Exception e) {
                     log.error(e);
                     throw new CustomException(Utility.buildErrorObject("ROLE_FETCH_ERROR","Error while handling role details from redis",500,"JWTFilter"));
@@ -89,13 +90,16 @@ public class JWTFilter extends OncePerRequestFilter {
             response.getWriter().write(Utility.toJson(apiError));
         } catch (Exception e) {
             log.error(e);
+            response.setContentType("application/json");
             request.setAttribute("responseWriterFlag",true);
             if(e instanceof CustomException customException){
                 response.setStatus(customException.getErrorObject().getHttpCode());
                 response.getWriter().write(Utility.toJson(customException.getErrorObject().getErrorMsg()));
             }
-            response.setStatus(500);
-            response.getWriter().write(Utility.toJson(new APIError("SOMETHING_WENT_WRONG",e.getMessage())));
+            else {
+                response.setStatus(500);
+                response.getWriter().write(Utility.toJson(new APIError("SOMETHING_WENT_WRONG", e.getMessage())));
+            }
         }
     }
 }
